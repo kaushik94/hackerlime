@@ -41,7 +41,7 @@ class SubmitCodeCommand(sublime_plugin.TextCommand):
    	  if not status:
    	  	print "\n\nenter your credentials in your home directory in a file '.hrconfig.txt' \n\n"
    	  	return
-	  payload, url, code = self.get_params()
+	  payload, url, code = self.get_params(username.strip('\n'), password.strip('\n'))
 
 	  sock = urllib2.Request(url+'submissions/', urllib.urlencode(payload))
 	  resp = urllib2.urlopen(sock)
@@ -53,13 +53,18 @@ class SubmitCodeCommand(sublime_plugin.TextCommand):
 	  sock = urllib2.Request(url+'submissions/'+str(id_)+'?')
 	  
 	  jsoned = 'NULL'
-	  while True:
+	  i = 0
+	  while i < 4:
 	  	resp = urllib2.urlopen(sock)
 	  	jsoned = JSON.loads(resp.read())
 	  	if len(jsoned['model']['testcase_message']) is not 0:
 	  		break
 	  	else:
 	  		time.sleep(1)
+	  		if i > 8:
+	  			print "\n\nCONNECTION TIMED OUT\n\n"
+	  			return
+	  		i += 1
 	  self.pretty_print(id_, code, jsoned)
 
    def get_credentials(self):
@@ -74,7 +79,7 @@ class SubmitCodeCommand(sublime_plugin.TextCommand):
 	  lines = f.readlines()
 	  return True, lines[0], lines[1]
 
-   def get_params(self):
+   def get_params(self, username, password):
 
 	  auth_handler = CustomBasicAuthHandler()
 	  auth_handler.add_password( realm=None, uri=master_url, user=username, passwd=password)
@@ -95,12 +100,14 @@ class SubmitCodeCommand(sublime_plugin.TextCommand):
 
 	  code, custom_testcase = self.get_code()
 	  juice = code.split('\n')[-1] 	  
-	  contester = map(str, juice.split('/')[4:])
+	  contester = map(str, juice.split())[-1]
+	  print contester
+	  contester = contester.split('/')
 	  # print contester
-	  if contester[1] == 'challenges':
+	  if contester[3] == 'challenges':
 		child_url = "master/challenges/"+contester[-1]+"/"
 	  else:
-		child_url = contester[2]+"/challenges/"+contester[-1]+"/"
+		child_url = contester[4]+"/challenges/"+contester[-1]+"/"
 	  return language, code, child_url
 
    def get_code(self):
@@ -130,4 +137,3 @@ class SubmitCodeCommand(sublime_plugin.TextCommand):
 
    def popup(self):
 	  pass
-
