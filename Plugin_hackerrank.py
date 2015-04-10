@@ -6,8 +6,8 @@ import re
 
 import base64
 
-username = 'kaushik_varanasi'
-password = 'hackerrank'
+username = ''
+password = ''
 master_url = 'https://www.hackerrank.com/rest/contests/'
 
 
