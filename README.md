@@ -1,6 +1,6 @@
 ## Synopsis
 
-A ublime text 2 plugin to directly submit/compile codes to hackerrank contests
+A sublime text 2 plugin to directly submit/compile codes to hackerrank contests
 
 Take a look at the following screencasts to understand how it works
 1. [compile code](https://www.youtube.com/watch?v=5_7jL4eEwO0)
