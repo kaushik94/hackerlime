@@ -2,6 +2,8 @@ import sublime, sublime_plugin
 import urllib2, httplib, urllib
 import json as JSON
 
+import re
+
 import base64
 
 username = 'kaushik_varanasi'
@@ -9,7 +11,7 @@ password = 'hackerrank'
 master_url = 'https://www.hackerrank.com/rest/contests/'
 
 
-lang = {'py':'python', 'java':'java', 'c':'c'}
+lang = {'py':'python', 'java':'java', 'c':'c', 'cpp':'cpp'}
 
 class CustomBasicAuthHandler(urllib2.HTTPBasicAuthHandler):
 	'''
@@ -38,7 +40,7 @@ class RunCodeCommand(sublime_plugin.TextCommand):
    
    def run(self, edit):
 
-	  payload, url, code = self.get_params()
+	  payload, url, code, custom_testcase = self.get_params()
 
 	  # print url
 	  sock = urllib2.Request(url+'compile_tests', urllib.urlencode(payload))
@@ -49,7 +51,7 @@ class RunCodeCommand(sublime_plugin.TextCommand):
 	  id_ =  header_['model']['id']
 	  sock = urllib2.Request(url+'compile_tests/'+str(id_)+'?')
 	  resp = urllib2.urlopen(sock)
-	  self.pretty_print(id_, code, JSON.loads(resp.read()))
+	  self.pretty_print(id_, code, JSON.loads(resp.read()), custom_testcase)
 
    def get_params(self):
 
@@ -60,8 +62,10 @@ class RunCodeCommand(sublime_plugin.TextCommand):
 
 	  language, code, custom_testcase, child_url = self.get_file_info()
 	  if custom_testcase is None:
-		payload = {'code':code, 'customtestcase': 'false', 'language':language}
-	  return payload, master_url+child_url, code
+		payload = {'code':code, 'customtestcase':'false', 'language':language}
+	  else:
+	  	payload = {'code':code, 'customtestcase':'true', 'language':language, 'custominput':custom_testcase}
+	  return payload, master_url+child_url, code, custom_testcase
 
    def get_file_info(self):
 	  ffname = self.view.file_name()
@@ -69,30 +73,27 @@ class RunCodeCommand(sublime_plugin.TextCommand):
 	  extension = file_name.split('.')[-1]
 	  language = lang[extension]
 
-	  code, custom_testcase = self.get_code()
+	  code, custom_testcase = self.get_code(language)
 	  juice = code.split('\n')[-1] 	  
-	  contester = map(str, juice.split('/')[3:])
-	  # print contester
-	  if contester[0] == 'challenges':
+	  contester = map(str, juice.split())[-1]
+	  contester = contester.split('/')
+	  if contester[3] == 'challenges':
 		child_url = "master/challenges/"+contester[-1]+"/"
 	  else:
-		child_url = contester[1]+"/challenges/"+contester[-1]+"/"
+		child_url = contester[4]+"/challenges/"+contester[-1]+"/"
 	  return language, code, custom_testcase, child_url
 
-   def get_code(self):
+   def get_code(self, language):
 
 	  content = self.view.substr(sublime.Region(0, self.view.size()))
+	  testcases = self.load_tests(content, language)
+	  if testcases is not None:
+	  	print testcases
+	  	return content, testcases
 	  return content, None
 
-   def pretty_print(self, id_, code, result):
+   def pretty_print(self, id_, code, result, custom_testcase):
 
-	  try:
-		import tkinter as tk
-		from tkinter import ttk
-		tk_available = True
-	  except ImportError:
-	  	print "unavail"
-		tk_available = False
 	  
 	  print "\n"+'SUBMISSION ID:', str(id_)+"\n"
 	  print "YOUR CODE"+"\n"
@@ -101,9 +102,25 @@ class RunCodeCommand(sublime_plugin.TextCommand):
 	  result_list = result['model']['testcase_message']
 	  print ''.join('	TESTCASE '+str(index+1)+": "+str(each)+'\n' for index, each in enumerate(result_list))
 
-	  if tk_available:
-		self.popup()
+	  if custom_testcase is not None:
+	  	print "CUSTOM TEST RESULT\n"
+	  	print "INPUT"
+	  	for each in result['model']['stdin']:
+	  		print str(each)
+	  	print "OUTPUT"
+	  	for each in result['model']['stdout']:
+	  		print str(each)
 
-   def popup(self):
-	  pass
-
+   def pylang_tests(self, content):
+	    m = re.findall('"""T\n(.*?)\nT"""', content, re.DOTALL)
+	    if len(m):
+	    	return m[0]
+	    return None
+   def reg_tests(self, content):
+	    m = re.findall('/*T\n(.*?)\nT*/', content, re.DOTALL)
+	    return None
+   def load_tests(self, content, language):
+	    if language is 'python':
+	    	return self.pylang_tests(content)
+	    elif language in ['c', 'cpp', 'java']:
+			return self.reg_tests(content)
