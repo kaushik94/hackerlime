@@ -6,8 +6,7 @@ import re
 
 import base64
 
-username = ''
-password = ''
+
 master_url = 'https://www.hackerrank.com/rest/contests/'
 
 
@@ -40,7 +39,11 @@ class RunCodeCommand(sublime_plugin.TextCommand):
    
    def run(self, edit):
 
-	  payload, url, code, custom_testcase = self.get_params()
+   	  status, username, password = self.get_credentials()
+   	  if not status:
+   	  	print "\n\nenter your credentials in your home directory in a file '.hrconfig.txt' \n\n"
+   	  	return
+	  payload, url, code, custom_testcase = self.get_params(username.strip('\n'), password.strip('\n'))
 
 	  # print url
 	  sock = urllib2.Request(url+'compile_tests', urllib.urlencode(payload))
@@ -53,7 +56,19 @@ class RunCodeCommand(sublime_plugin.TextCommand):
 	  resp = urllib2.urlopen(sock)
 	  self.pretty_print(id_, code, JSON.loads(resp.read()), custom_testcase)
 
-   def get_params(self):
+   def get_credentials(self):
+   	  from os.path import expanduser
+   	  import os
+	  home = expanduser("~")+'/'
+
+	  try:
+	  	f = open(home+'.hrconfig.txt', 'r')
+	  except IOError:
+	  	return None, None, None
+	  lines = f.readlines()
+	  return True, lines[0], lines[1]
+
+   def get_params(self, username, password):
 
 	  auth_handler = CustomBasicAuthHandler()
 	  auth_handler.add_password( realm=None, uri=master_url, user=username, passwd=password)
@@ -99,6 +114,7 @@ class RunCodeCommand(sublime_plugin.TextCommand):
 	  print "YOUR CODE"+"\n"
 	  print code+"\n"
 	  print "RESULT:" 
+	  # print result
 	  result_list = result['model']['testcase_message']
 	  print ''.join('	TESTCASE '+str(index+1)+": "+str(each)+'\n' for index, each in enumerate(result_list))
 

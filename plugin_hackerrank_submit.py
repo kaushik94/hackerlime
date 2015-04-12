@@ -101,7 +101,7 @@ class SubmitCodeCommand(sublime_plugin.TextCommand):
 	  code, custom_testcase = self.get_code()
 	  juice = code.split('\n')[-1] 	  
 	  contester = map(str, juice.split())[-1]
-	  print contester
+	  # print contester
 	  contester = contester.split('/')
 	  # print contester
 	  if contester[3] == 'challenges':
